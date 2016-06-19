@@ -5,7 +5,7 @@ defmodule KV.BucketTest do
     {:ok, bucket} = KV.Bucket.start_link
     assert KV.Bucket.get(bucket, "milk") == nil
 
-    KV.Bucket.put(buket, "milk", 3)
+    KV.Bucket.put(bucket, "milk", 3)
     assert KV.Bucket.get(bucket, "milk") == 3
   end
 end
