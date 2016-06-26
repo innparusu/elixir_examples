@@ -29,6 +29,7 @@ defmodule KV.Bucket do
     :timer.sleep(1000)
     Agent.get_and_update(bucket, fn dict -> 
      :timer.sleep(1000)
-     Map.pop(dict, key))
+     Map.pop(dict, key)
+    end)
   end
 end
