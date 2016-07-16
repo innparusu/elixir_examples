@@ -2,7 +2,7 @@ defmodule KV.RegistryTest do
   use ExUnit.Case, asymc: true
 
   setup do
-    {:ok, registry} = KV.Registry.start_link
+    {:ok, registry} = KV.Registry.start_link(context.test)
     {:ok, registry: registry}
   end
 
