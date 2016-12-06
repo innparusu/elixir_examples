@@ -25,27 +25,26 @@ defmodule BucketSort.Scheduler do
   end
 
   defp split_bucket(list, clients) do
-    min = Enum.min(list)
-    max = Enum.max(list)
-    Float.ceil((max - min) / length(clients))
+    {min, max} = Enum.min_max(list)
+    {min, max, Float.ceil((max - min) / length(clients))}
   end
 
-  defp schedule_processes(split, 0) do
+  defp schedule_processes(_, 0) do
     receive do
       {:ready, client} ->
         send client, {:shutdown}
         delete_client(client)
         if length(get_clients) > 0 do
-          schedule_processes(split, 0)
+          schedule_processes(nil, 0)
         end
     end
   end
 
-  defp schedule_processes(split, n) do
+  defp schedule_processes({min, max, split}, n) do
     receive do
       {:ready, client} ->
-        send client, {:bucket, split, n}
-        schedule_processes(split, n-1)
+        send client, {:bucket, min, max, split, n}
+        schedule_processes({min, max, split}, n-1)
     end
   end
 
@@ -73,18 +72,18 @@ defmodule BucketSort.Client do
   defp receiver(scheduler) do
     send scheduler, {:ready, self}
     receive do
-      { :bucket, split, bn} ->
-        list= BucketSort.Scheduler.get_list 
-        min = Enum.min(list) + (bn-1) * split
-        max = Enum.min(list) + bn * split
-        BucketSort.Scheduler.add_answer({bn, bsort(list, min, max, bn)})
+      { :bucket, min, max, split, bn} ->
+        min_separate = min + (bn-1) * split
+        max_separate = max + bn * split
+        BucketSort.Scheduler.add_answer({bn, bsort(min_separate, max_separate, bn)})
         receiver(scheduler)
       { :shutdown } ->
         exit(:normal)
     end
   end
 
-  defp bsort(list, min, max, bn) do
+  defp bsort(min, max, bn) do
+    list = BucketSort.Scheduler.get_list 
     bucket = Enum.filter(list, &(in_bucket?(&1, min, max, bn)))
     Enum.sort(bucket)
   end
