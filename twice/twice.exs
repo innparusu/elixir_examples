@@ -1,6 +1,6 @@
 defmodule Twice.Scheduler do
   @name {:global, __MODULE__}
-  def start_link(list) do: Agent.start_link(fn -> {list, [], []} end, name: @name)
+  def start_link(list), do: Agent.start_link(fn -> {list, [], []} end, name: @name)
 
   def get_range, do: Agent.get(@name, fn {range, _, _} -> range end)
 
@@ -12,11 +12,9 @@ defmodule Twice.Scheduler do
 
   def add_answer(answer), do: Agent.update(@name, fn {range, clients, answers} -> {range, clients, [answer|answers]} end)
 
+  def clear_answer, do: Agent.update(@name, fn {range, clients, _} -> {range, clients,[]} end)
+
   defp delete_client(client), do: Agent.update(@name, fn {range, clients, answers} -> {range, List.delete(clients, client), answers} end)
-
-  def connect_nodes(stream), do: Enum.each(stream, &:connect_node/1)
-
-  defp connect_node(node), do: String.strip(node) |> String.to_aton |> Node.connect
 
   def run do
     clients = get_clients
@@ -29,7 +27,7 @@ defmodule Twice.Scheduler do
     clients |> Enum.each(&(send &1, {:ready, self}))
   end
 
-  defp split_clients(s..e, clients) do
+  defp split_clients(_..e, clients) do
     Float.ceil(e/length(clients))
   end
 
@@ -47,8 +45,7 @@ defmodule Twice.Scheduler do
   defp schedule_processes(split, n, range) do
     receive do
       {:ready, client} ->
-        split_list = Enum.slice(range, round((n-1) * split), round(split))
-        send client, {:twice, n, split_list}
+        send client, {:twice, n, range, split}
         schedule_processes(split, n-1, range)
     end
   end
@@ -76,8 +73,9 @@ defmodule Twice.Client do
   defp receiver(scheduler) do
     send scheduler, {:ready, self}
     receive do
-      { :twice, pn, list} ->
-        Twice.Scheduler.add_answer({pn, twice(list)})
+      { :twice, pn, range, split} ->
+        split_list = Enum.slice(range, round((pn-1) * split), round(split))
+        Twice.Scheduler.add_answer({pn, twice(split_list)})
         receiver(scheduler)
       { :shutdown } ->
         exit(:normal)
@@ -85,6 +83,6 @@ defmodule Twice.Client do
   end
 
   defp twice(list) do
-    Enum.map(list, &(&1*&1))
+    Enum.map(list, &(&1*2))
   end
 end
