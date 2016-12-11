@@ -75,7 +75,7 @@ defmodule Twice.Client do
     receive do
       { :twice, pn, range, split} ->
         split_list = Enum.slice(range, round((pn-1) * split), round(split))
-        Twice.Scheduler.add_answer({pn, twice(split_list)})
+        twice(split_list)
         receiver(scheduler)
       { :shutdown } ->
         exit(:normal)
